@@ -1,0 +1,20 @@
+{
+  "name": "AILearn",
+  "version": "0.0.0",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build"
+  },
+  "dependencies": {
+    "axios": "^0.21.1",
+    "element-plus": "^1.0.2-beta.53",
+    "vue": "^3.0.4",
+    "vue-media-recorder": "^0.1.10",
+    "vue-router": "^4.0.10"
+  },
+  "devDependencies": {
+    "@vue/compiler-sfc": "^3.0.4",
+    "vite": "^1.0.0-rc.13",
+    "vite-plugin-style-import": "^1.0.1"
+  }
+}
