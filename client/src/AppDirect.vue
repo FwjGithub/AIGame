@@ -1,6 +1,6 @@
 <template>
   <el-row>
-    <el-button type="primary" @click="test">å�‘é€�è¯·æ±‚</el-button>
+    <el-button type="primary" @click="test">坑逝请求</el-button>
   </el-row>
 </template>
 		

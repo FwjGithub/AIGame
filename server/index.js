@@ -29,22 +29,25 @@ app.get('/api', function (req, resp) {
 })
 app.post('/api', function (req, resp) {
     console.log('post', req.url)
+    let allData = '';
     const imgBase64 = '';
     req.on('data', function (data) {
-        // console.log(data.toString())
-        // console.log("=============")
-        const image = JSON.parse(data.toString()).image.toString()
+        allData += data.toString();
+        if (allData[allData.length - 1] === '}') {
+            const image = JSON.parse(allData).image.toString()
 
-        // console.log('image:', image)
-        client.gesture(image).then(function (result) {
-            // console.log('后端调用AI接口结果：', JSON.stringify(result))
-            resp.writeHead('200')
-            resp.write(formatData('success', '数据如result所示', result))
-            resp.end()
-        }).catch(function (err) {
-            // 如果发生网络错误
-            console.log(err)
-        })
+            // console.log('image:', image)
+            client.gesture(image).then(function (result) {
+                // console.log('后端调用AI接口结果：', JSON.stringify(result))
+                resp.writeHead('200')
+                resp.write(formatData('success', '数据如result所示', result))
+                resp.end()
+            }).catch(function (err) {
+                // 如果发生网络错误
+                console.log(err)
+            })
+        }
+
     })
 })
 app.listen(port, () => {
