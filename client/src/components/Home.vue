@@ -4,23 +4,22 @@
             <input
                 class="mid"
                 placeholder="请输入昵称以进入游戏"
-                v-model="name"
+                v-model="userName"
                 @keydown.enter="toChooseCount"
             />
         </el-col>
     </el-row>
     <el-row v-show="countVisible">
         <el-dialog title="提示" v-model="countVisible" width="30%" center>
-            <span>请选择猜拳次数</span>
-            <el-select v-model="count" placeholder="请选择猜拳次数">
+            <span>选择猜拳次数：</span>
+            <el-select  placeholder="请选择猜拳次数" value=5 v-model="count">
                 <el-option label="3局2胜" value=3></el-option>
-                <el-option label="5局3胜" value=5></el-option>
-                <el-option label="7局4胜" value=7></el-option>
+                <el-option label="5局3胜" value=5></el-option> 
             </el-select>
             <template #footer>
                 <span class="dialog-footer">
                     <el-button type="primary" @click="countVisible = false">
-                        <router-link to="/game" >确定</router-link>
+                        <router-link :to="{ path: '/game', query: { userName ,count }}" >确定</router-link>
                     </el-button>
                 </span>
             </template>
@@ -33,15 +32,15 @@
 import { ref } from "vue";
 export default {
     setup(props) {
-        const name = ref("");
+        const userName = ref("");
         const countVisible = ref(false);
         const count = ref(3);
         const toChooseCount = function() {
-            console.log("调用了count");
+            // console.log("调用了count");
             countVisible.value = true;
         };
         return {
-            name,
+            userName,
             countVisible,
             toChooseCount,
             count

@@ -1,11 +1,13 @@
 <template>
     <el-row class="header">
-        <el-col :span="5">按空格开始游戏</el-col>
-        <el-col :span="5">按ENTER进行拍照</el-col>
-        <el-col :span="5">按Q关闭摄像头</el-col>
+        <el-col :span="3">按空格开始游戏</el-col>
+        <el-col :span="3">按ENTER进行拍照</el-col>
+        <el-col :span="3">按Q关闭摄像头</el-col>
+        <el-col :span="5">玩家：{{userName}}</el-col>
         <el-col :span="9" class="score">
-            当前得分：
-            <span>{{score}}</span>
+            <span>胜：{{winScore}}</span>
+            <span>负：{{loseScore}}</span>
+            <span>平：{{deuceScore}}</span>
         </el-col>
     </el-row>
     <el-row class="content">
@@ -20,7 +22,7 @@
     <el-row class="result">
         <el-col :span="5" class="player">
             <canvas id="canvas" ref="canvas" width="255" height="247"></canvas>
-            <span>{{player}}</span>
+            <span >{{player}}</span>
         </el-col>
         <el-col :span="5" class="computer">
             <img ref="showImg" width="255" height="247" />
@@ -30,44 +32,81 @@
             <span>{{wall}}</span>
         </el-col>
     </el-row>
+    <el-row v-show="countVisible">
+        <el-dialog title="提示" v-model="countVisible" width="30%" center>
+            <span>请选择猜拳次数</span>
+            <el-select v-model="count"   placeholder="请选择猜拳次数:">
+                <el-option label="3局2胜" value=3></el-option>
+                <el-option label="5局3胜" value=5></el-option>
+            </el-select>
+            <template #footer>
+                <span class="dialog-footer">
+                    <el-button type="primary" @click="countVisible = false">
+                        <router-link :to="{ path: '/game', query: { userName,count }}" >确定</router-link>
+                    </el-button>
+                </span>
+            </template>
+        </el-dialog>
+
+        
+    </el-row>
 </template>   
 <script>
 import axios from "axios";
 import { ref, onMounted } from "vue";
 import Fist from "../assets/Fist.png";
-import two from "../assets/two.png";
+import Two from "../assets/Two.png";
 import Five from "../assets/Five.png";
 import getBase64 from "../util/getBase64";
 import getGesture from "../util/getGesture";
 import judgeWin from "../util/judgeWin";
+import resToGesture from '../util/resToGesture'
 //510 494
 export default {
-    data() {
-        let score = ref(0);
+    data(props) {
+        console.log(this.$route.query)
+
+        // console.log(props.count)
+        let winScore = ref(0);
+        let loseScore = ref(0);
+        let deuceScore = ref(0);
         let randomImg = ref(Five);
         let timer = ref(null);
         let wall = ref("（进行中）");
         let player = ref("玩家");
         let computer = ref("电脑");
+        let count = ref(this.$route.query.count)
+        let userName = ref(this.$route.query.userName)
+        let countVisible = ref(false)
         // 调用摄像头
 
         return {
-            score,
+            winScore,
+            loseScore,
+            deuceScore,
             randomImg,
             timer,
             wall,
             player,
-            computer
+            computer,
+            count,
+            userName,
+            countVisible
         };
     },
+    watch(){
+        console.log(this.$route.query)
+        // this.$route
+    },
     mounted() {
-        // console.log(this);
         window.addEventListener("keypress", e => {
             // console.log(e);
+            if(this.$route.path !== '/game') return;
             if (e.keyCode === 32) {
                 this.callCamera();
                 this.changeRandomImg();
             } else if (e.keyCode === 13) {
+
                 this.photograph();
             } else if (e.keyCode === 113) {
                 this.closeCamera();
@@ -106,7 +145,7 @@ export default {
             this.$refs["showImg"].src = this.$data.randomImg;
             const computer = this.$data.randomImg
                 .toString()
-                .match(/\/(Five|two|Fist)/)[0]
+                .match(/\/(Five|Two|Fist)/)[0]
                 .slice(1);
             // console.log(computer);
             axios({
@@ -119,31 +158,35 @@ export default {
                 console.log(player.classname, computer, win);
                 if (!player) {
                     this.$data.player = "识别出错，本轮重来";
-                } else if (player.classname === "Five") {
-                    player.classname = "布";
-                } else if (player.classname === "two") {
-                    player.classname === "剪刀";
-                } else if (player.classname === "Fist") {
-                    player.classname = "石头";
+                } else {
+                    player.classname = resToGesture(player.classname)
                 }
                 if (player) {
                     this.$data.player = player.classname;
                 }
+                this.$data.computer = resToGesture(computer);
                 // this.$data.computer = computer;
 
                 if (win === 0) {
                     this.$data.wall = "打平了";
+                    this.$data.deuceScore++;
                     // console.log("平手")
                 } else if (win === 1) {
                     this.$data.wall = "玩家胜！";
-                    this.$data.score++;
+                    this.$data.winScore++;
 
                     // console.log("胜利了！")
                 } else if (win === -1) {
                     this.$data.wall = "电脑胜。。。";
-                    this.$data.score--;
+                    this.$data.loseScore++;
 
                     // console.log("失败了。。")
+                }
+                if(win !== undefined && --this.$data.count === 0){
+                    let score = this.$data.winScore - this.$data.loseScore;
+                    console.log('你的最终得分是：',score);
+                    if(score > 0) console.log("恭喜你，赢了！")
+                    else console.log("很遗憾，你输了。")
                 }
             });
 
@@ -179,7 +222,7 @@ export default {
                 if (random === 1) {
                     this.$data.randomImg = Fist;
                 } else if (random === 2) {
-                    this.$data.randomImg = two;
+                    this.$data.randomImg = Two;
                 } else {
                     this.$data.randomImg = Five;
                 }
@@ -200,10 +243,14 @@ export default {
     background-color: rgba(0, 0, 0, 0.1);
 }
 .header .score {
+    display: flex;
+    justify-content: space-around;
     background-color: rgba(0, 0, 255, 0.2);
 }
 .content {
     padding: 20px 30px;
+    display: flex;
+    justify-content: space-between;
 }
 .content .player,
 .content .computer {
@@ -230,7 +277,8 @@ export default {
 .result .computer {
     display: flex;
     flex-direction: column;
-    align-items: flex-end;
+    text-align: center;
+    align-items: center;
     font-size: 30px;
     font-weight: 600;
 }
