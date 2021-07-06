@@ -22,53 +22,38 @@
     <el-row class="result">
         <el-col :span="6"></el-col>
         <el-col :span="5" class="player">
-            <div :class="winner === 'player' ? 'model' : ''">
+            <div :class="nowWinner === 'player' ? 'model' : ''">
                 <canvas id="canvas" ref="canvas" width="255" height="247"></canvas>
             </div>
             <span>{{player}}</span>
         </el-col>
         <el-col :span="2" class="vs">VS</el-col>
         <el-col :span="5" class="computer">
-            <div :class="winner === 'computer' ? 'model' : ''">
+            <div :class="nowWinner === 'computer' ? 'model' : ''">
                 <img ref="showImg" width="255" height="247" />
             </div>
             <span>{{computer}}</span>
         </el-col>
         <el-col :span="6"></el-col>
 
-        <!-- <el-col :span="5" class="winner">
-            <span>{{winner}}</span>
-        </el-col>-->
-        <el-drawer title="比赛结束" v-model="showFinished" direction="ltr">
-            <!-- <div>
-                {{winScore > finishCount / 2 ? '恭喜你，赢得比赛！': '很遗憾，你输了！'}}
-            </div>
-            <div>
-                请选择
-            </div>-->
+        <el-drawer title="游戏结束" v-model="showFinished" direction="ltr">
             <div class="drawer-content">
                 <el-form :model="form">
-                    <el-form-item label="玩家昵称" :label-width="formLabelWidth">
+                    <el-form-item label="玩家昵称">
                         <el-input v-model="userName" autocomplete="off"></el-input>
                     </el-form-item>
-                    <el-form-item label="游戏场数" :label-width="formLabelWidth">
-                        <el-select v-model="finishCount" placeholder="请选择猜拳次数">
+                    <el-form-item label="游戏场数">
+                        <el-select v-model="count" placeholder="请选择猜拳次数">
                             <el-option label="三局两胜" value="3"></el-option>
                             <el-option label="五局三胜" value="5"></el-option>
                         </el-select>
                     </el-form-item>
-                    <!-- <el-form-item>{{winScore > finishCount / 2? "恭喜你，赢了！": "很遗憾，你输了"}}</el-form-item> -->
-                    <!-- <el-form-item></el-form-item> -->
                 </el-form>
-                <div>{{winScore > finishCount / 2? "恭喜你，赢了！": "很遗憾，你输了"}}</div>
+                <span v-if="realWinner" >{{realWinner === 'player' ? "恭喜你，赢了！": "很遗憾，你输了"}}</span>
             </div>
             <div class="drawer-footer">
-                <el-button @click="handleExit">退出游戏</el-button>
-                <el-button
-                    type="primary"
-                    @click="handleCommit"
-                    :loading="loading"
-                >{{ loading ? '提交中 ...' : '再来一轮' }}</el-button>
+                <!-- <el-button @click="handleExit">退出游戏</el-button> -->
+                <el-button type="primary" @click="handleCommit">再来一轮</el-button>
             </div>
         </el-drawer>
     </el-row>
@@ -86,43 +71,40 @@ import resToGesture from "../util/resToGesture";
 //510 494
 export default {
     data(props) {
-        // console.log(this.$route.query);
-
-        // console.log(props.count)
-        let winScore = ref(0);
-        let loseScore = ref(0);
-        let deuceScore = ref(0);
-        let randomImg = ref(Five);
-        let timer = ref(null);
-        let winner = ref("（进行中）");
-        let player = ref("玩家");
-        let computer = ref("电脑");
-        let count = ref(this.$route.query.count);
-        let userName = ref(this.$route.query.userName);
-        let showFinished = ref(false);
-        let finishCount = this.$route.query.count;
+        let winScore = 0;
+        let loseScore = 0;
+        let deuceScore = 0;
+        let randomImg = Five;
+        let timer = null;
+        let nowWinner = '';
+        let realWinner = '';
+        let player = "玩家";
+        let computer = "电脑";
+        let played = 0;
+        let userName = this.$route.query.userName;
+        let showFinished = true;
+        let count = this.$route.query.count;
         // 调用摄像头
-        let form = { userName, finishCount };
-
+        let form = { userName, count };
         return {
             winScore,
             loseScore,
             deuceScore,
             randomImg,
             timer,
-            winner,
+            nowWinner,
+            realWinner,
             player,
             computer,
             count,
             userName,
             showFinished,
-            finishCount,
+            played,
             form
         };
     },
-    watch() {
-        // console.log(this.$route.query);
-        // this.$route
+    updated() {
+        // console.log(this.$data.played, this.$data.count, this.$route.query.count);
     },
     mounted() {
         window.addEventListener("keypress", e => {
@@ -180,7 +162,7 @@ export default {
             }).then(res => {
                 let player = getGesture(res.data.data.result);
                 let win = judgeWin(player.classname, computer);
-                console.log(player.classname, computer, win);
+                // console.log(player.classname, computer, win);
                 if (!player) {
                     this.$data.player = "识别出错，本轮重来";
                 } else {
@@ -193,49 +175,28 @@ export default {
                 // this.$data.computer = computer;
 
                 if (win === 0) {
-                    this.$data.winner = "";
+                    this.$data.nowWinner = "";
                     this.$data.deuceScore++;
                     // console.log("平手")
                 } else if (win === 1) {
-                    this.$data.winner = "player";
+                    this.$data.nowWinner = "player";
                     this.$data.winScore++;
 
                     // console.log("胜利了！")
                 } else if (win === -1) {
-                    this.$data.winner = "computer";
+                    this.$data.nowWinner = "computer";
                     this.$data.loseScore++;
 
                     // console.log("失败了。。")
                 }
-                if (win === 1 || win === -1) this.$data.count--;
-                if (this.$data.count === 0) this.$data.showFinished = true;
-                // if (
-                //     this.$data.count === 0 &&
-                //     this.$data.winScore > this.$route.query.count / 2
-                // ) {
-                //     this.$data.showFinished.value = true;
-                //     console.log("恭喜你，赢了！");
-                // } else if (
-                //     this.$data.count === 0 &&
-                //     this.$data.winScore < this.$route.query.count / 2
-                // ) {
-                //     this.$data.showFinished.value = true;
-
-                //     console.log("很遗憾，你输了。");
-                // }
+                // console.log(this.$data.played);
+                if (win === 1 || win === -1) this.$data.played++;
+                if (this.$data.played == this.$data.count){
+                    if(this.$data.winScore > this.$data.loseScore) this.$data.realWinner = 'player';
+                    else this.$data.realWinner = 'computer';
+                    this.$data.showFinished = true;
+                }
             });
-
-            // Promise.all(axios({
-            //     method: "post",
-            //     url: "/api",
-            //     data: { image: imgBase64 }
-            // }), axios({
-            //     method: "post",
-            //     url: "/api",
-            //     data: { image: computerData }
-            // })).then((res1, res2) => {
-            //     console.log(res1, res2)
-            // })
         }, // 关闭摄像头,
         closeCamera() {
             if (!this.$refs["video"].srcObject) {
@@ -265,29 +226,32 @@ export default {
             }, 200);
         },
         handleCommit(e) {
-            // console.log(this.$data.form.count,this.$data.form.userName);
-            this.$router.push({
-                path: "/game",
-                query: {
-                    userName: this.$data.form.userName,
-                    count: this.$data.form.finishCount
-                }
-            });
-            this.initData();
+            // console.log(this.$data.form.count, this.$data.form.userName);
+            this.$router
+                .push({
+                    path: "/game",
+                    query: {
+                        userName: this.$data.form.userName,
+                        count: this.$data.form.count
+                    }
+                })
+                .then(() => {
+                    this.initData();
+                });
         },
         initData() {
             this.$data.showFinished = false;
-            this.$data.count = this.$route.query.count;
-            this.$data.userName = this.$route.query.userName;
             this.$data.winScore = 0;
             this.$data.loseScore = 0;
             this.$data.deuceScore = 0;
             this.$data.randomImg = Five;
             this.$data.timer = null;
-            this.$data.winner = "（进行中）";
+            clearInterval(this.$data.timer);
+            this.$data.nowWinner = "";
             this.$data.player = "玩家";
             this.$data.computer = "电脑";
-            this.$data.finishCount = this.$route.query.count;
+            this.$data.played = 0;
+            this.$data.realWinner = '';
         }
     }
 };
