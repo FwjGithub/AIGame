@@ -14,41 +14,63 @@
         <el-col :span="10" class="player">
             <video ref="video" width="510" height="494" autoplay></video>
         </el-col>
-        <el-col :span="4" :v-show="false" class="vs">VS</el-col>
-        <el-col :span="10" :v-show="false" class="computer">
+        <el-col :span="4" class="vs">VS</el-col>
+        <el-col :span="10" class="computer">
             <img ref="img" :src="randomImg" width="510" height="494" />
         </el-col>
     </el-row>
     <el-row class="result">
+        <el-col :span="6"></el-col>
         <el-col :span="5" class="player">
-            <canvas id="canvas" ref="canvas" width="255" height="247"></canvas>
-            <span >{{player}}</span>
+            <div :class="winner === 'player' ? 'model' : ''">
+                <canvas id="canvas" ref="canvas" width="255" height="247"></canvas>
+            </div>
+            <span>{{player}}</span>
         </el-col>
+        <el-col :span="2" class="vs">VS</el-col>
         <el-col :span="5" class="computer">
-            <img ref="showImg" width="255" height="247" />
+            <div :class="winner === 'computer' ? 'model' : ''">
+                <img ref="showImg" width="255" height="247" />
+            </div>
             <span>{{computer}}</span>
         </el-col>
-        <el-col :span="5" class="wall">
-            <span>{{wall}}</span>
-        </el-col>
-    </el-row>
-    <el-row v-show="countVisible">
-        <el-dialog title="提示" v-model="countVisible" width="30%" center>
-            <span>请选择猜拳次数</span>
-            <el-select v-model="count"   placeholder="请选择猜拳次数:">
-                <el-option label="3局2胜" value=3></el-option>
-                <el-option label="5局3胜" value=5></el-option>
-            </el-select>
-            <template #footer>
-                <span class="dialog-footer">
-                    <el-button type="primary" @click="countVisible = false">
-                        <router-link :to="{ path: '/game', query: { userName,count }}" >确定</router-link>
-                    </el-button>
-                </span>
-            </template>
-        </el-dialog>
+        <el-col :span="6"></el-col>
 
-        
+        <!-- <el-col :span="5" class="winner">
+            <span>{{winner}}</span>
+        </el-col>-->
+        <el-drawer title="比赛结束" v-model="showFinished" direction="ltr">
+            <!-- <div>
+                {{winScore > finishCount / 2 ? '恭喜你，赢得比赛！': '很遗憾，你输了！'}}
+            </div>
+            <div>
+                请选择
+            </div>-->
+            <div class="drawer-content">
+                <el-form :model="form">
+                    <el-form-item label="玩家昵称" :label-width="formLabelWidth">
+                        <el-input v-model="userName" autocomplete="off"></el-input>
+                    </el-form-item>
+                    <el-form-item label="游戏场数" :label-width="formLabelWidth">
+                        <el-select v-model="finishCount" placeholder="请选择猜拳次数">
+                            <el-option label="三局两胜" value="3"></el-option>
+                            <el-option label="五局三胜" value="5"></el-option>
+                        </el-select>
+                    </el-form-item>
+                    <!-- <el-form-item>{{winScore > finishCount / 2? "恭喜你，赢了！": "很遗憾，你输了"}}</el-form-item> -->
+                    <!-- <el-form-item></el-form-item> -->
+                </el-form>
+                <div>{{winScore > finishCount / 2? "恭喜你，赢了！": "很遗憾，你输了"}}</div>
+            </div>
+            <div class="drawer-footer">
+                <el-button @click="handleExit">退出游戏</el-button>
+                <el-button
+                    type="primary"
+                    @click="handleCommit"
+                    :loading="loading"
+                >{{ loading ? '提交中 ...' : '再来一轮' }}</el-button>
+            </div>
+        </el-drawer>
     </el-row>
 </template>   
 <script>
@@ -60,11 +82,11 @@ import Five from "../assets/Five.png";
 import getBase64 from "../util/getBase64";
 import getGesture from "../util/getGesture";
 import judgeWin from "../util/judgeWin";
-import resToGesture from '../util/resToGesture'
+import resToGesture from "../util/resToGesture";
 //510 494
 export default {
     data(props) {
-        console.log(this.$route.query)
+        // console.log(this.$route.query);
 
         // console.log(props.count)
         let winScore = ref(0);
@@ -72,13 +94,15 @@ export default {
         let deuceScore = ref(0);
         let randomImg = ref(Five);
         let timer = ref(null);
-        let wall = ref("（进行中）");
+        let winner = ref("（进行中）");
         let player = ref("玩家");
         let computer = ref("电脑");
-        let count = ref(this.$route.query.count)
-        let userName = ref(this.$route.query.userName)
-        let countVisible = ref(false)
+        let count = ref(this.$route.query.count);
+        let userName = ref(this.$route.query.userName);
+        let showFinished = ref(false);
+        let finishCount = this.$route.query.count;
         // 调用摄像头
+        let form = { userName, finishCount };
 
         return {
             winScore,
@@ -86,27 +110,28 @@ export default {
             deuceScore,
             randomImg,
             timer,
-            wall,
+            winner,
             player,
             computer,
             count,
             userName,
-            countVisible
+            showFinished,
+            finishCount,
+            form
         };
     },
-    watch(){
-        console.log(this.$route.query)
+    watch() {
+        // console.log(this.$route.query);
         // this.$route
     },
     mounted() {
         window.addEventListener("keypress", e => {
             // console.log(e);
-            if(this.$route.path !== '/game') return;
+            if (this.$route.path !== "/game") return;
             if (e.keyCode === 32) {
                 this.callCamera();
                 this.changeRandomImg();
             } else if (e.keyCode === 13) {
-
                 this.photograph();
             } else if (e.keyCode === 113) {
                 this.closeCamera();
@@ -159,7 +184,7 @@ export default {
                 if (!player) {
                     this.$data.player = "识别出错，本轮重来";
                 } else {
-                    player.classname = resToGesture(player.classname)
+                    player.classname = resToGesture(player.classname);
                 }
                 if (player) {
                     this.$data.player = player.classname;
@@ -168,26 +193,36 @@ export default {
                 // this.$data.computer = computer;
 
                 if (win === 0) {
-                    this.$data.wall = "打平了";
+                    this.$data.winner = "";
                     this.$data.deuceScore++;
                     // console.log("平手")
                 } else if (win === 1) {
-                    this.$data.wall = "玩家胜！";
+                    this.$data.winner = "player";
                     this.$data.winScore++;
 
                     // console.log("胜利了！")
                 } else if (win === -1) {
-                    this.$data.wall = "电脑胜。。。";
+                    this.$data.winner = "computer";
                     this.$data.loseScore++;
 
                     // console.log("失败了。。")
                 }
-                if(win !== undefined && --this.$data.count === 0){
-                    let score = this.$data.winScore - this.$data.loseScore;
-                    console.log('你的最终得分是：',score);
-                    if(score > 0) console.log("恭喜你，赢了！")
-                    else console.log("很遗憾，你输了。")
-                }
+                if (win === 1 || win === -1) this.$data.count--;
+                if (this.$data.count === 0) this.$data.showFinished = true;
+                // if (
+                //     this.$data.count === 0 &&
+                //     this.$data.winScore > this.$route.query.count / 2
+                // ) {
+                //     this.$data.showFinished.value = true;
+                //     console.log("恭喜你，赢了！");
+                // } else if (
+                //     this.$data.count === 0 &&
+                //     this.$data.winScore < this.$route.query.count / 2
+                // ) {
+                //     this.$data.showFinished.value = true;
+
+                //     console.log("很遗憾，你输了。");
+                // }
             });
 
             // Promise.all(axios({
@@ -228,6 +263,31 @@ export default {
                 }
                 // console.log("计时器。。。");
             }, 200);
+        },
+        handleCommit(e) {
+            // console.log(this.$data.form.count,this.$data.form.userName);
+            this.$router.push({
+                path: "/game",
+                query: {
+                    userName: this.$data.form.userName,
+                    count: this.$data.form.finishCount
+                }
+            });
+            this.initData();
+        },
+        initData() {
+            this.$data.showFinished = false;
+            this.$data.count = this.$route.query.count;
+            this.$data.userName = this.$route.query.userName;
+            this.$data.winScore = 0;
+            this.$data.loseScore = 0;
+            this.$data.deuceScore = 0;
+            this.$data.randomImg = Five;
+            this.$data.timer = null;
+            this.$data.winner = "（进行中）";
+            this.$data.player = "玩家";
+            this.$data.computer = "电脑";
+            this.$data.finishCount = this.$route.query.count;
         }
     }
 };
@@ -273,6 +333,19 @@ export default {
     align-items: center;
     background-color: #eee;
 }
+.result .drawer-content {
+    padding: 10px 20px;
+}
+.result .drawer-footer {
+    display: flex;
+    justify-content: flex-end;
+    padding: 10px 20px;
+}
+.result .vs {
+    font-size: 50px;
+    font-weight: 600;
+    text-align: center;
+}
 .result .player,
 .result .computer {
     display: flex;
@@ -282,6 +355,17 @@ export default {
     font-size: 30px;
     font-weight: 600;
 }
+.result .model::after {
+    position: absolute;
+    transform: translateX(-100%);
+    display: inline-block;
+    width: 257px;
+    height: 249px;
+    line-height: 249px;
+    content: "胜";
+    color: #fee;
+    background-color: rgba(0, 0, 0, 0.2);
+}
 .result .player canvas {
     border: 1px solid rgba(0, 0, 255, 0.2);
 }
@@ -289,7 +373,7 @@ export default {
     display: flex;
     flex-direction: column
 } */
-.wall {
+.winner {
     font-weight: 600;
     font-size: 30px;
     display: flex;

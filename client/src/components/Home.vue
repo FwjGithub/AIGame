@@ -18,8 +18,9 @@
             </el-select>
             <template #footer>
                 <span class="dialog-footer">
-                    <el-button type="primary" @click="countVisible = false">
-                        <router-link :to="{ path: '/game', query: { userName ,count }}" >确定</router-link>
+                    <el-button type="primary" @click="toGamePage">
+                        确定
+                        <!-- <router-link :to="{ path: '/game', query: { userName ,count }}" >确定</router-link> -->
                     </el-button>
                 </span>
             </template>
@@ -30,20 +31,28 @@
 
 <script>
 import { ref } from "vue";
+import {useRouter} from 'vue-router'
 export default {
     setup(props) {
         const userName = ref("");
         const countVisible = ref(false);
         const count = ref(3);
+        const router = useRouter();
+        console.log(router)
         const toChooseCount = function() {
             // console.log("调用了count");
             countVisible.value = true;
         };
+        const toGamePage = function(){
+            countVisible.value = false;
+            router.push({ path: '/game', query: { userName:userName.value, count: count.value } })
+        }
         return {
             userName,
             countVisible,
             toChooseCount,
-            count
+            count,
+            toGamePage
         };
     }
 };
