@@ -12,9 +12,10 @@
     <el-row v-show="countVisible">
         <el-dialog title="提示" v-model="countVisible" width="30%" center>
             <span>选择猜拳次数：</span>
-            <el-select  placeholder="请选择猜拳次数" value=5 v-model="count">
-                <el-option label="3局2胜" value=3></el-option>
-                <el-option label="5局3胜" value=5></el-option> 
+            <el-select placeholder="请选择猜拳次数" v-model="count">
+                <el-option label="一局决胜" value="1"></el-option>
+                <el-option label="三局两胜" value="3"></el-option>
+                <el-option label="五局三胜" value="5"></el-option>
             </el-select>
             <template #footer>
                 <span class="dialog-footer">
@@ -31,22 +32,25 @@
 
 <script>
 import { ref } from "vue";
-import {useRouter} from 'vue-router'
+import { useRouter } from "vue-router";
 export default {
     setup(props) {
         const userName = ref("");
         const countVisible = ref(false);
         const count = ref(3);
         const router = useRouter();
-        console.log(router)
+        // console.log(router)
         const toChooseCount = function() {
             // console.log("调用了count");
             countVisible.value = true;
         };
-        const toGamePage = function(){
+        const toGamePage = function() {
             countVisible.value = false;
-            router.push({ path: '/game', query: { userName:userName.value, count: count.value } })
-        }
+            router.push({
+                path: "/game",
+                query: { userName: userName.value, count: count.value }
+            });
+        };
         return {
             userName,
             countVisible,

@@ -1,23 +1,28 @@
 <template>
     <el-row class="header">
-        <el-col :span="3">按空格开始游戏</el-col>
-        <el-col :span="3">按ENTER进行拍照</el-col>
-        <el-col :span="3">按Q关闭摄像头</el-col>
-        <el-col :span="5">玩家：{{userName}}</el-col>
+        <el-col :span="3" class="tips">按空格开始游戏</el-col>
+        <el-col :span="3" class="tips">按ENTER进行拍照</el-col>
+        <el-col :span="3" class="tips">按Q关闭摄像头</el-col>
+        <el-col :span="5">欢迎你：{{userName}}</el-col>
         <el-col :span="9" class="score">
-            <span>胜：{{winScore}}</span>
-            <span>负：{{loseScore}}</span>
-            <span>平：{{deuceScore}}</span>
+            <span>玩家：{{winScore}}</span>
+            <span>电脑：{{loseScore}}</span>
+            <span>平手：{{deuceScore}}</span>
         </el-col>
     </el-row>
     <el-row class="content">
-        <el-col :span="10" class="player">
+        <video ref="video" width="510" height="494" autoplay></video>
+        <el-col :span="4" class="vs">VS</el-col>
+
+        <img ref="img" :src="randomImg" width="510" height="494" />
+
+        <!-- <el-col :span="10" class="player">
             <video ref="video" width="510" height="494" autoplay></video>
         </el-col>
         <el-col :span="4" class="vs">VS</el-col>
         <el-col :span="10" class="computer">
             <img ref="img" :src="randomImg" width="510" height="494" />
-        </el-col>
+        </el-col>-->
     </el-row>
     <el-row class="result">
         <el-col :span="6"></el-col>
@@ -36,7 +41,7 @@
         </el-col>
         <el-col :span="6"></el-col>
 
-        <el-drawer title="游戏结束" v-model="showFinished" direction="ltr">
+        <el-drawer title="游戏结束" v-model="showFinished" direction="ltr" :before-close="handleClose">
             <div class="drawer-content">
                 <el-form :model="form">
                     <el-form-item label="玩家昵称">
@@ -44,15 +49,16 @@
                     </el-form-item>
                     <el-form-item label="游戏场数">
                         <el-select v-model="count" placeholder="请选择猜拳次数">
+                            <el-option label="一局决胜" value="1"></el-option>
                             <el-option label="三局两胜" value="3"></el-option>
                             <el-option label="五局三胜" value="5"></el-option>
                         </el-select>
                     </el-form-item>
                 </el-form>
-                <span v-if="realWinner" >{{realWinner === 'player' ? "恭喜你，赢了！": "很遗憾，你输了"}}</span>
+                <span v-if="realWinner">{{realWinner === 'player' ? "恭喜你，赢了！": "很遗憾，你输了"}}</span>
             </div>
             <div class="drawer-footer">
-                <!-- <el-button @click="handleExit">退出游戏</el-button> -->
+                <el-button @click="handleExit">退出游戏</el-button>
                 <el-button type="primary" @click="handleCommit">再来一轮</el-button>
             </div>
         </el-drawer>
@@ -76,13 +82,13 @@ export default {
         let deuceScore = 0;
         let randomImg = Five;
         let timer = null;
-        let nowWinner = '';
-        let realWinner = '';
+        let nowWinner = "";
+        let realWinner = "";
         let player = "玩家";
         let computer = "电脑";
         let played = 0;
         let userName = this.$route.query.userName;
-        let showFinished = true;
+        let showFinished = false;
         let count = this.$route.query.count;
         // 调用摄像头
         let form = { userName, count };
@@ -109,8 +115,13 @@ export default {
     mounted() {
         window.addEventListener("keypress", e => {
             // console.log(e);
-            if (this.$route.path !== "/game") return;
+            if (this.$route.path !== "/game" || this.$data.showFinished) return;
             if (e.keyCode === 32) {
+                // console.log("winner", this.$data.realWinner)
+                if (this.$data.realWinner) {
+                    this.$data.showFinished = true;
+                    return;
+                }
                 this.callCamera();
                 this.changeRandomImg();
             } else if (e.keyCode === 13) {
@@ -132,10 +143,10 @@ export default {
                     this.$refs["video"].srcObject = success;
                     // 实时拍照效果
                     this.$refs["video"].play();
-                })
-                .catch(error => {
-                    console.error("摄像头开启失败，请检查摄像头是否可用！");
                 });
+            // .catch(error => {
+            //     console.error("摄像头开启失败，请检查摄像头是否可用！");
+            // });
         }, // 拍照
         photograph() {
             let ctx = this.$refs["canvas"].getContext("2d"); // 把当前视频帧内容渲染到canvas上
@@ -162,7 +173,7 @@ export default {
             }).then(res => {
                 let player = getGesture(res.data.data.result);
                 let win = judgeWin(player.classname, computer);
-                // console.log(player.classname, computer, win);
+                console.log(player.classname, computer, win);
                 if (!player) {
                     this.$data.player = "识别出错，本轮重来";
                 } else {
@@ -191,9 +202,10 @@ export default {
                 }
                 // console.log(this.$data.played);
                 if (win === 1 || win === -1) this.$data.played++;
-                if (this.$data.played == this.$data.count){
-                    if(this.$data.winScore > this.$data.loseScore) this.$data.realWinner = 'player';
-                    else this.$data.realWinner = 'computer';
+                if (this.$data.played == this.$data.count) {
+                    if (this.$data.winScore > this.$data.loseScore)
+                        this.$data.realWinner = "player";
+                    else this.$data.realWinner = "computer";
                     this.$data.showFinished = true;
                 }
             });
@@ -223,7 +235,20 @@ export default {
                     this.$data.randomImg = Five;
                 }
                 // console.log("计时器。。。");
-            }, 200);
+            }, 160);
+        },
+        handleClose(done) {
+            this.$confirm("回到首页？")
+                .then(_ => {
+                    this.$router.push({ path: "/" });
+                    done();
+                })
+                .catch(_ => {
+                    this.$data.showFinished = false;
+                });
+        },
+        handleExit() {
+            this.$router.push({ path: "/" });
         },
         handleCommit(e) {
             // console.log(this.$data.form.count, this.$data.form.userName);
@@ -251,35 +276,45 @@ export default {
             this.$data.player = "玩家";
             this.$data.computer = "电脑";
             this.$data.played = 0;
-            this.$data.realWinner = '';
+            this.$data.realWinner = "";
         }
     }
 };
 </script>
 
 <style scoped>
+*{
+    user-select: none;
+}
 .header {
+    height: 6vh;
+    box-sizing: border-box;
+    padding: 15px;
     font-size: 20px;
     font-weight: 600;
     text-align: center;
-    padding: 10px 30px;
-    margin-bottom: 10px;
-    background-color: rgba(0, 0, 0, 0.1);
+    background-color: rgb(0, 0, 0, 0.1);
+    background-color: #eee;
+}
+.header .tips{
+    font-weight: 500;
 }
 .header .score {
     display: flex;
     justify-content: space-around;
-    background-color: rgba(0, 0, 255, 0.2);
+
+    background-color: rgb(142, 187, 231);
 }
 .content {
+    height: 60vh;
     padding: 20px 30px;
     display: flex;
-    justify-content: space-between;
+    justify-content: space-around;
 }
-.content .player,
+/* .content .player,
 .content .computer {
     border: 5px solid rgba(0, 0, 0, 0.2);
-}
+} */
 .content .computer img {
     border: none !important;
     outline: none;
@@ -291,11 +326,14 @@ export default {
     padding-top: 150px;
 }
 .result {
-    height: 35vh;
+    height: 34vh;
     display: flex;
     justify-content: space-around;
     align-items: center;
+    background-color: rgb(0, 0, 0, 0.1);
     background-color: #eee;
+
+
 }
 .result .drawer-content {
     padding: 10px 20px;
